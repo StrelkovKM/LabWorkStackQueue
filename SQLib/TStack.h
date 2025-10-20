@@ -23,7 +23,7 @@ public:
 
 	size_t GetSize();
 
-	size_t Get();
+	T Get();
 	void Put(const T& value);
 
 	T* begin() noexcept;
@@ -70,7 +70,6 @@ inline TStack<T>::TStack(std::initializer_list<T> init_list, size_t capacity_)
 		else {
 			size_t index = 0;
 			data = new T[capacity];
-			for (auto i = 0; i < top; i++) data[i] = T();
 			for (const auto& elem : init_list) data[index++] = elem;
 		}
 	}
@@ -140,7 +139,7 @@ inline size_t TStack<T>::GetSize()
 }
 
 template<class T>
-inline size_t TStack<T>::Get()
+inline T TStack<T>::Get()
 {
 	if (!IsEmpty()) {
 		return data[--top];

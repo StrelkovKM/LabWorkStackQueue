@@ -9,5 +9,3 @@ add_executable(${target} ${srcs} ${hdrs})
 target_link_libraries(${target} gtest ${errorlib})
 target_link_libraries(${target} gtest ${stringlib})
 target_link_libraries(${target} gtest ${vmlib})
-
-
