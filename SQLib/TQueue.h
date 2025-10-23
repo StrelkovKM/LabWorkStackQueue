@@ -24,6 +24,8 @@ public:
 	~TQueue();
 
 	size_t GetSize();
+	size_t GetHead();
+	size_t GetTail();
 
 	T Get();
 	void Put(const T& value);
@@ -236,6 +238,18 @@ template<class T>
 inline size_t TQueue<T>::GetSize()
 {
 	return count;
+}
+
+template<class T>
+inline size_t TQueue<T>::GetHead()
+{
+	return head;
+}
+
+template<class T>
+inline size_t TQueue<T>::GetTail()
+{
+	return tail;
 }
 
 template<class T>

@@ -15,6 +15,7 @@ protected:
 
 public:
 	TStack();
+	TStack(const size_t& capacity_);
 	TStack(std::initializer_list<T> init_list, size_t capacity_);
 	TStack(const TStack<T>& other);
 	TStack(TStack<T>&& other) noexcept;
@@ -22,9 +23,12 @@ public:
 	~TStack();
 
 	size_t GetSize();
+	size_t GetTop();
 
 	T Get();
 	void Put(const T& value);
+
+	void Reserve(const size_t& new_capacity);
 
 	T* begin() noexcept;
 	const T* begin() const noexcept;
@@ -33,8 +37,8 @@ public:
 	const T* end() const noexcept;
 	const T* cend() const noexcept;
 
-	bool IsFull();
-	bool IsEmpty();
+	bool IsFull() const;
+	bool IsEmpty() const;
 
 	TStack& operator=(const TStack<T>& other);
 	TStack& operator=(TStack<T>&& other) noexcept;
@@ -55,6 +59,9 @@ public:
 
 template<class T>
 inline TStack<T>::TStack() : capacity(0), top(0), data(nullptr) {}
+
+template<class T>
+inline TStack<T>::TStack(const size_t& capacity_) : capacity(capacity_), top(0), data(new T[capacity]) {}
 
 
 template<class T>
@@ -103,7 +110,7 @@ inline TStack<T>::TStack(TStack<T>&& other) noexcept
 
 	other.capacity = 0;
 	other.top = 0;
-	other.data = 0;
+	other.data = nullptr;
 }
 
 template<class T>
@@ -139,6 +146,12 @@ inline size_t TStack<T>::GetSize()
 }
 
 template<class T>
+inline size_t TStack<T>::GetTop()
+{
+	return top;
+}
+
+template<class T>
 inline T TStack<T>::Get()
 {
 	if (!IsEmpty()) {
@@ -156,6 +169,20 @@ inline void TStack<T>::Put(const T& value)
 	else {
 		data[top++] = value;
 	}
+}
+
+template<class T>
+inline void TStack<T>::Reserve(const size_t& new_capacity)
+{
+	if (capacity == new_capacity) return;
+	else if (capacity < new_capacity) {
+		TStack<T> buff (*this);
+		if (data) delete[] data;
+		data = new T[new_capacity];
+		for (auto i = 0; i < buff.GetSize(); i++) data[i] = buff[i];
+		capacity = new_capacity;
+	}
+	else throw TError("Incorrect input", __func__, __FILE__, __LINE__);
 }
 
 
@@ -194,14 +221,14 @@ inline const T* TStack<T>::cend() const noexcept
 {
 	return data + top;
 }
-template<class T>
-inline bool TStack<T>::IsFull()
+template<class T> 
+inline bool TStack<T>::IsFull() const
 {
 	return (capacity == top && top != 0);
 }
 
 template<class T>
-inline bool TStack<T>::IsEmpty()
+inline bool TStack<T>::IsEmpty() const
 {
 	return top == 0;
 }
@@ -305,9 +332,12 @@ template<class O>
 inline ostream& operator<<(ostream& out, const TStack<O>& other)
 {
 	out << "{ ";
-	for (auto i = 0; i < other.top - 1; i++) {
-		std::cout << other.data[i] << "; ";
+	if ( !(other.IsEmpty()) ) {
+		for (auto i = 0; i < other.top - 1; i++) {
+			std::cout << other.data[i] << "; ";
+		}
+		out << other.data[other.top - 1];
 	}
-	out << other.data[other.top - 1] << " }";
+	out << " }";
 	return out;
 }
