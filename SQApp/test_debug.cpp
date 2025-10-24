@@ -10,5 +10,16 @@ int main() {
 	M.Put_M(2, 5);
 	M.Put_M(2, 18);
 	M.Put_M(2, 9); //Repack
-	cout << M;
+	cout << M << " " << M.GetCapacity_M() << endl;
+	M.SayStatusStack();
+	M.PushStack_M(1, 2);
+	M.Put_M(1, 2);
+	M.Put_M(1, 1);
+	cout << M << " " << M.GetCapacity_M() << endl;
+	M.SayStatusStack();
+	M.PopStack_M(1);
+	cout << M << " " << M.GetCapacity_M() << endl;
+	M.SayStatusStack();
+
+
 }

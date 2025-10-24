@@ -19,12 +19,18 @@ public:
 	TMultiStack(const size_t& capacity_, const size_t& number_of_stacks);
 	TMultiStack(const TVector<TStack<T>>& other);
 	TMultiStack(TVector<TStack<T>>&& other) noexcept;
+	~TMultiStack();
 
 	size_t GetSize_M() const;
 	size_t GetCapacity_M() const;
+	size_t GetCountStacks() const;
+	void SayStatusStack() const;
 
 	void Put_M(const size_t& number_stack, const T& value);
 	T Get_M(const size_t& number_stack);
+
+	void PushStack_M(const size_t& number_stack, const size_t& capacity_stack);
+	void PopStack_M(const size_t& number_stack);
 
 	bool IsFull_M() const;
 	bool IsEmpty_M() const;
@@ -48,10 +54,10 @@ inline void TMultiStack<T>::Repack()
 	size_t free_remainder = free_memory % data.GetSize();
 
 	for (auto i = 0; i < free_remainder; i++) {
-		data[i].Reserve(data[i].GetCapacity() + ((data[i].GetSize() * free_memory) / GetSize_M()) + 1);
+		data[i].Reserve(data[i].GetSize() + ((data[i].GetSize() * free_memory) / GetSize_M()) + 1);
 	}
 	for (auto i = free_remainder; i < data.GetSize(); i++) {
-		data[i].Reserve(data[i].GetCapacity() + ((data[i].GetSize() * free_memory) / GetSize_M()));
+		data[i].Reserve(data[i].GetSize() + ((data[i].GetSize() * free_memory) / GetSize_M()));
 	}
 }
 
@@ -80,6 +86,11 @@ template<typename T>
 inline TMultiStack<T>::TMultiStack(TVector<TStack<T>>&& other) noexcept : data(std::move(other)) {}
 
 template<typename T>
+inline TMultiStack<T>::~TMultiStack()
+{
+}
+
+template<typename T>
 inline size_t TMultiStack<T>::GetSize_M() const
 {
 	size_t size = 0;
@@ -92,7 +103,32 @@ inline size_t TMultiStack<T>::GetSize_M() const
 template<typename T>
 inline size_t TMultiStack<T>::GetCapacity_M() const
 {
+	size_t size = 0;
+	for (auto i = 0; i < data.GetSize(); i++) {
+		size += data[i].GetCapacity();
+	}
+	return size;
+}
+
+template<typename T>
+inline size_t TMultiStack<T>::GetCountStacks() const
+{
 	return data.GetSize();
+}
+
+template<typename T>
+inline void TMultiStack<T>::SayStatusStack() const
+{
+	if (IsEmpty_M()) std::cout << "MultyStack is empty\n";
+	else if (IsFull_M()) std::cout << "MultiStack is full\n";
+	else {
+		for (auto i = 0; i < data.GetSize(); i++) {
+			if (data[i].IsEmpty()) cout << "Stack " << i << " is empty (" << data[i].GetCapacity() << " free space)\n";
+			else if (data[i].IsFull()) cout << "Stack " << i << " is full\n";
+			else cout << "Stack " << i << " has " << data[i].GetCapacity() - data[i].GetSize() << " free space\n";
+		}
+	}
+
 }
 
 template<typename T>
@@ -115,6 +151,42 @@ inline T TMultiStack<T>::Get_M(const size_t& number_stack)
 }
 
 template<typename T>
+inline void TMultiStack<T>::PushStack_M(const size_t& number_stack, const size_t& capacity_stack)
+{
+	if (IsFull_M()) throw TError("MultiStack is full", __func__, __FILE__, __LINE__);
+	else if (GetCapacity_M() < capacity_stack) {
+		throw TError("MultiStack can't take it", __func__, __FILE__, __LINE__);
+	}
+
+	size_t searh_capacity_stack = 0;
+
+	while (searh_capacity_stack != capacity_stack) {
+		for (auto i = 0; i < data.GetSize(); i++) {
+			if (!IsFullStack_M(i) && !IsEmptyStack_M(i)) {
+				data[i].Reserve(data[i].GetCapacity() - 1);
+				searh_capacity_stack++;
+			}
+			if (searh_capacity_stack == capacity_stack) break;
+		}
+	}
+	data.push_pos(number_stack, TStack<T>(capacity_stack));
+}
+
+template<typename T>
+inline void TMultiStack<T>::PopStack_M(const size_t& number_stack)
+{
+	size_t buffer = data[number_stack].GetCapacity();
+	data.pop_pos(number_stack);
+	while (buffer != 0) {
+		for (auto i = 0; i < data.GetSize(); i++) {
+			data[i].Reserve(data[i].GetCapacity() + 1);
+			buffer--;
+			if (buffer == 0) break;
+		}
+	}
+}
+
+template<typename T>
 inline bool TMultiStack<T>::IsFull_M() const
 {
 	for (auto i = 0; i < data.GetSize(); i++) {
@@ -126,7 +198,13 @@ inline bool TMultiStack<T>::IsFull_M() const
 template<typename T>
 inline bool TMultiStack<T>::IsEmpty_M() const
 {
-	return data == T();
+	if (data.IsEmpty()) return true;
+	else {
+		for (auto i = 0; i < data.GetSize(); i++) {
+			if (!data[i].IsEmpty()) return false;
+		}
+		return true;
+	}
 }
 
 template<typename T>

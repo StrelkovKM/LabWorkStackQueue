@@ -71,10 +71,8 @@ public:
 	const T* rcend() const noexcept;
 
 	TVector operator+(const TVector<T>& other);
-	bool operator==(const TVector<T>& other);
-	bool operator!=(const TVector<T>& other);
-
-	T FindSmallestOfNLargest(size_t n) const;
+	bool operator==(const TVector<T>& other) const;
+	bool operator!=(const TVector<T>& other) const;
 
 	template<class O>
 	friend ostream& operator<<(ostream& out, TVector<O>& t);
@@ -189,7 +187,7 @@ inline size_t TVector<T>::GetCapacity() const
 template<class T>
 inline TVector<T>::~TVector()
 {
-	if (data) delete[] data;
+	delete[] data;
 	capacity = 0;
 	size = 0;
 }
@@ -261,8 +259,8 @@ inline TVector<T>& TVector<T>::operator=(std::initializer_list<T> init)
 
 		while (src != end)
 			*dest++ = *src++;
-		return *this;
 	}
+	return *this;
 }
 
 template<class T>
@@ -278,6 +276,7 @@ inline void TVector<T>::push_back(const T& value)
 		delete[] data;
 		data = newData;
 		capacity = newCapacity;
+
 	}
 
 	data[size] = value;
@@ -329,8 +328,9 @@ inline void TVector<T>::Reverse()
 {
 	if (size > 1)
 	{
-		T* copy = new T[size]{};
+		T* copy = new T[size];
 		for (auto i = 0; i < size; i++) copy[i] = data[size - 1 - i];
+		if (data) delete[] data;
 		data = copy;
 	}
 }
@@ -378,16 +378,18 @@ inline void TVector<T>::Resize(size_t count)
 template<class T>
 inline void TVector<T>::push_pos(size_t pos, const T& value)
 {
-	if (pos > size) throw TError("Position out of range", __func__, __FILE__, __LINE__);
-
-	if (pos == size) push_back(value);
-	else if (pos == 0) push_front(value);
-	else 
-	{
-		push_back(T());
-		for (auto i = size-1; i > pos; i--) data[i] = data[i - 1];
-		data[pos] = value;
+	if (pos > size) {
+		throw TError("Position out of range", __func__, __FILE__, __LINE__);
 	}
+	if (size == capacity) {
+		Reserve(capacity == 0 ? 1 : capacity * 2);
+	}
+
+	for (size_t i = size; i > pos; --i) {
+		data[i] = std::move(data[i - 1]);
+	}
+	data[pos] = value;
+	size++;
 }
 
 template<class T>
@@ -482,7 +484,7 @@ inline TVector<T> TVector<T>::operator+(const TVector<T>& other)
 }
 
 template<class T>
-inline bool TVector<T>::operator==(const TVector<T>& other)
+inline bool TVector<T>::operator==(const TVector<T>& other) const
 {
 	if (size != other.size) return false;
 	for (auto i = 0; i < size; i++) if (data[i] != other.data[i]) return false;
@@ -490,7 +492,7 @@ inline bool TVector<T>::operator==(const TVector<T>& other)
 }
 
 template<class T>
-inline bool TVector<T>::operator!=(const TVector<T>& other)
+inline bool TVector<T>::operator!=(const TVector<T>& other) const
 {
 	if (*this == other) return false;
 	return true;
