@@ -16,7 +16,7 @@ protected:
 
 public:
 	TMultiStack();
-	TMultiStack(const size_t& ñapacity_, const size_t& number_of_stacks);
+	TMultiStack(const size_t& capacity_, const size_t& number_of_stacks);
 	TMultiStack(const TVector<TStack<T>>& other);
 	TMultiStack(TVector<TStack<T>>&& other) noexcept;
 
@@ -59,11 +59,11 @@ template<typename T>
 inline TMultiStack<T>::TMultiStack() : data() {}
 
 template<typename T>
-inline TMultiStack<T>::TMultiStack(const size_t& ñapacity_, const size_t& number_of_stacks)
+inline TMultiStack<T>::TMultiStack(const size_t& capacity_, const size_t& number_of_stacks)
 {
 	data.Reserve(number_of_stacks);
-	size_t remainder = ñapacity_ % number_of_stacks;
-	size_t capacities = ñapacity_ / number_of_stacks;
+	size_t remainder = capacity_ % number_of_stacks;
+	size_t capacities = capacity_ / number_of_stacks;
 
 	for (auto i = 0; i < remainder; i++) {
 		data.push_back(TStack<T>(capacities + 1));
