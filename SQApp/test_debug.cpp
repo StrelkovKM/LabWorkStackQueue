@@ -3,11 +3,12 @@
 #include "TMultiStack.h"
 
 int main() {
-	TMultiStack<int> M(30, 3);
-	M.PutM(0, 1);
-	M.PutM(0, 8);
-	M.PutM(2, 1);
-	M.PutM(2, 5);
-	M.PutM(2, 18);
+	TMultiStack<int> M(9, 3);
+	M.Put_M(0, 1);
+	M.Put_M(0, 8);
+	M.Put_M(2, 1);
+	M.Put_M(2, 5);
+	M.Put_M(2, 18);
+	M.Put_M(2, 9); //Repack
 	cout << M;
 }

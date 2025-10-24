@@ -22,8 +22,8 @@ public:
 	TStack(const TString& filename);
 	~TStack();
 
-	size_t GetSize();
-	size_t GetTop();
+	size_t GetSize() const;
+	size_t GetCapacity() const;
 
 	T Get();
 	void Put(const T& value);
@@ -140,16 +140,17 @@ inline TStack<T>::~TStack()
 }
 
 template<class T>
-inline size_t TStack<T>::GetSize()
+inline size_t TStack<T>::GetSize() const
 {
 	return top;
 }
 
 template<class T>
-inline size_t TStack<T>::GetTop()
+inline size_t TStack<T>::GetCapacity() const
 {
-	return top;
+	return capacity;
 }
+
 
 template<class T>
 inline T TStack<T>::Get()
@@ -175,7 +176,7 @@ template<class T>
 inline void TStack<T>::Reserve(const size_t& new_capacity)
 {
 	if (capacity == new_capacity) return;
-	else if (capacity < new_capacity) {
+	else if (top <= new_capacity) {
 		TStack<T> buff (*this);
 		if (data) delete[] data;
 		data = new T[new_capacity];

@@ -2,10 +2,12 @@
 
 #include <iostream>
 #include <initializer_list>
+
 using namespace std;
 
 #include "TString_Adv.h"
 #include "TError_Adv.h"
+#include "TQueue.h"
 #include "TStack.h"
 
 template<class T>
@@ -71,6 +73,8 @@ public:
 	TVector operator+(const TVector<T>& other);
 	bool operator==(const TVector<T>& other);
 	bool operator!=(const TVector<T>& other);
+
+	T FindSmallestOfNLargest(size_t n) const;
 
 	template<class O>
 	friend ostream& operator<<(ostream& out, TVector<O>& t);
@@ -491,7 +495,36 @@ inline bool TVector<T>::operator!=(const TVector<T>& other)
 	if (*this == other) return false;
 	return true;
 }
+template<class T>
+inline T TVector<T>::FindSmallestOfNLargest(size_t n) const 
+{
+	if (n == 0 || n > size) {
+		throw TError("n must be between 1 and vector size", __func__, __FILE__, __LINE__);
+	}
 
+	if (n == 1) {
+		return *std::max_element(begin(), end());
+	}
+
+	if (n == size) {
+		return *std::min_element(begin(), end());
+	}
+
+	TQueue<T> minQueue(n);
+
+	for (size_t i = 0; i < n; i++) {
+		minQueue.Put(data[i]);
+	}
+
+	for (size_t i = n; i < size; i++) {
+		if (data[i] > minQueue.FindMin()) {
+			minQueue.Get();
+			minQueue.Put(data[i]);
+		}
+	}
+
+	return minQueue.FindMin();
+}
 
 template<class O>
 inline std::ostream& operator<<(ostream& out, TVector<O>& other)

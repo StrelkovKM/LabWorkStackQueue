@@ -44,7 +44,8 @@ public:
 
 	void SaveToFile(const TString& filename);
 
-	T FindMin();
+	
+	T FindMin() const;
 
 	template<class O>
 	friend std::ostream& operator<<(std::ostream& out, const TQueue<O>& other);
@@ -243,13 +244,13 @@ inline size_t TQueue<T>::GetSize()
 template<class T>
 inline size_t TQueue<T>::GetHead()
 {
-	return head;
+	return data[head];
 }
 
 template<class T>
 inline size_t TQueue<T>::GetTail()
 {
-	return tail;
+	return data[tail-1];
 }
 
 template<class T>
@@ -432,7 +433,7 @@ inline void TQueue<T>::SaveToFile(const TString& filename)
 }
 
 template<class T>
-inline T TQueue<T>::FindMin()
+inline T TQueue<T>::FindMin() const
 {
 	if (!(IsEmpty())) {
 		T buffer = data[head];
@@ -453,6 +454,8 @@ inline T TQueue<T>::FindMin()
 	}
 	else throw TError("Stack is empty", __func__, __FILE__, __LINE__);
 }
+
+
 
 template<class O>
 inline std::ostream& operator<<(std::ostream& out, const TQueue<O>& other)
