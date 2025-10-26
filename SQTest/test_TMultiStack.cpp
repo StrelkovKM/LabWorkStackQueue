@@ -146,7 +146,6 @@ TEST_F(TMultiStackTest, ExceptionHandling) {
 
   // Test Get from empty stack
   EXPECT_THROW(stack.Get_M(0), TError);
-
   // Fill stack to capacity
   for (int i = 0; i < 5; i++) {
     stack.Put_M(0, i);
