@@ -17,8 +17,8 @@ protected:
 public:
 	TMultiStack();
 	TMultiStack(const size_t& capacity_, const size_t& number_of_stacks);
-	TMultiStack(const TVector<TStack<T>>& other);
-	TMultiStack(TVector<TStack<T>>&& other) noexcept;
+	TMultiStack(const TMultiStack<T>& other);
+	TMultiStack(TMultiStack<T>&& other) noexcept;
 	~TMultiStack();
 
 	size_t GetSize_M() const;
@@ -37,6 +37,12 @@ public:
 
 	bool IsFullStack_M(const size_t& number_stack) const;
 	bool IsEmptyStack_M(const size_t& number_stack) const;
+
+	TMultiStack& operator=(const TMultiStack<T>& other);
+	TMultiStack& operator=(TMultiStack<T>&& other) noexcept;
+
+	bool operator==(const TMultiStack<T>& other);
+	bool operator!=(const TMultiStack<T>& other);
 
 	template<typename O>
 	friend ostream& operator<<(ostream& out, const TMultiStack<O>& other);
@@ -67,23 +73,28 @@ inline TMultiStack<T>::TMultiStack() : data() {}
 template<typename T>
 inline TMultiStack<T>::TMultiStack(const size_t& capacity_, const size_t& number_of_stacks)
 {
-	data.Reserve(number_of_stacks);
-	size_t remainder = capacity_ % number_of_stacks;
-	size_t capacities = capacity_ / number_of_stacks;
+	if (number_of_stacks != 0) {
+		data.Reserve(number_of_stacks);
+		size_t remainder = capacity_ % number_of_stacks;
+		size_t capacities = capacity_ / number_of_stacks;
 
-	for (auto i = 0; i < remainder; i++) {
-		data.push_back(TStack<T>(capacities + 1));
+		for (auto i = 0; i < remainder; i++) {
+			data.push_back(TStack<T>(capacities + 1));
+		}
+		for (auto i = remainder; i < number_of_stacks; i++) {
+			data.push_back(TStack<T>(capacities));
+		}
 	}
-	for (auto i = remainder; i < number_of_stacks; i++) {
-		data.push_back(TStack<T>(capacities));
+	else {
+		data.Reserve(capacity_);
 	}
 }
 
 template<typename T>
-inline TMultiStack<T>::TMultiStack(const TVector<TStack<T>>& other) : data(other) {}
+inline TMultiStack<T>::TMultiStack(const TMultiStack<T>& other) : data(other.data) {}
 
 template<typename T>
-inline TMultiStack<T>::TMultiStack(TVector<TStack<T>>&& other) noexcept : data(std::move(other)) {}
+inline TMultiStack<T>::TMultiStack(TMultiStack<T>&& other) noexcept : data(std::move(other.data)) {}
 
 template<typename T>
 inline TMultiStack<T>::~TMultiStack()
@@ -162,7 +173,7 @@ inline void TMultiStack<T>::PushStack_M(const size_t& number_stack, const size_t
 
 	while (searh_capacity_stack != capacity_stack) {
 		for (auto i = 0; i < data.GetSize(); i++) {
-			if (!IsFullStack_M(i) && !IsEmptyStack_M(i)) {
+			if (!IsFullStack_M(i)) {
 				data[i].Reserve(data[i].GetCapacity() - 1);
 				searh_capacity_stack++;
 			}
@@ -217,6 +228,30 @@ template<typename T>
 inline bool TMultiStack<T>::IsEmptyStack_M(const size_t& number_stack) const
 {
 	return data[number_stack].IsEmpty();
+}
+
+template<typename T>
+inline TMultiStack<T>& TMultiStack<T>::operator=(const TMultiStack<T>& other)
+{
+	data = other.data;
+}
+
+template<typename T>
+inline TMultiStack<T>& TMultiStack<T>::operator=(TMultiStack<T>&& other) noexcept
+{
+	data = std::move(other.data);
+}
+
+template<typename T>
+inline bool TMultiStack<T>::operator==(const TMultiStack<T>& other)
+{
+	return data == other.data;
+}
+
+template<typename T>
+inline bool TMultiStack<T>::operator!=(const TMultiStack<T>& other)
+{
+	return data != other.data;
 }
 
 template<typename O>
