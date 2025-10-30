@@ -24,6 +24,7 @@ public:
 
 	size_t GetSize() const;
 	size_t GetCapacity() const;
+	size_t GetTopElem() const;
 
 	T Get();
 	void Put(const T& value);
@@ -151,6 +152,14 @@ inline size_t TStack<T>::GetCapacity() const
 	return capacity;
 }
 
+template <class T>
+inline size_t TStack<T>::GetTopElem() const
+{
+	if (IsEmpty()) {
+        throw TError("Stack is empty - cannot get top element", __func__, __FILE__, __LINE__);
+    }
+    return data[top-1];
+}
 
 template<class T>
 inline T TStack<T>::Get()
