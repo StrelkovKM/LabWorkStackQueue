@@ -1,22 +1,21 @@
 #include <gtest.h>
-#include <cstdio> // для std::remove
+#include <cstdio>
 #include <fstream>
+#include <sstream>
 #include "TMultiStack.h"
 
 class TMultiStackTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        // Создаем тестовые данные перед каждым тестом
         stack3x5 = TMultiStack<int>(3, 5);
         stack2x3 = TMultiStack<int>(2, 3);
     }
 
     void TearDown() override {
-        // Очищаем после тестов при необходимости
     }
 
-    TMultiStack<int> stack3x5; // 3 стека по 5 элементов каждый
-    TMultiStack<int> stack2x3; // 2 стека по 3 элемента каждый
+    TMultiStack<int> stack3x5;
+    TMultiStack<int> stack2x3;
 };
 
 // Тест конструкторов
@@ -25,10 +24,12 @@ TEST_F(TMultiStackTest, Constructors) {
     TMultiStack<int> emptyStack;
     EXPECT_EQ(emptyStack.GetCountStacks(), 0);
     EXPECT_EQ(emptyStack.GetCapacity_M(), 0);
+    EXPECT_EQ(emptyStack.GetSize_M(), 0);
 
     // Конструктор с параметрами
     EXPECT_EQ(stack3x5.GetCountStacks(), 3);
     EXPECT_EQ(stack3x5.GetCapacity_M(), 15);
+    EXPECT_EQ(stack3x5.GetSize_M(), 0);
     EXPECT_TRUE(stack3x5.IsEmpty(0));
     EXPECT_TRUE(stack3x5.IsEmpty(1));
     EXPECT_TRUE(stack3x5.IsEmpty(2));
@@ -39,17 +40,58 @@ TEST_F(TMultiStackTest, Constructors) {
     TMultiStack<int> copyStack(stack3x5);
     EXPECT_EQ(copyStack.GetCountStacks(), 3);
     EXPECT_EQ(copyStack.GetCapacity_M(), 15);
-    EXPECT_EQ(copyStack.Size(0), 1);
-    EXPECT_EQ(copyStack.Size(1), 1);
+    EXPECT_EQ(copyStack.GetSizeOfStack(0), 1);
+    EXPECT_EQ(copyStack.GetSizeOfStack(1), 1);
     EXPECT_EQ(copyStack(0, 0), 10);
     EXPECT_EQ(copyStack(1, 0), 20);
+}
 
-    // Конструктор перемещения
+// Тест конструктора из файла
+TEST_F(TMultiStackTest, FileConstructor) {
+    const std::string filename = "constructor_test.bin";
+    
+    // Создаем и заполняем стек
+    TMultiStack<int> originalStack(2, 3);
+    originalStack.Push(0, 100);
+    originalStack.Push(0, 200);
+    originalStack.Push(1, 300);
+    originalStack.SaveToFile(filename);
+
+    // Создаем стек из файла
+    TMultiStack<int> fileStack(filename);
+    
+    EXPECT_EQ(fileStack.GetCountStacks(), 2);
+    EXPECT_EQ(fileStack.GetCapacity_M(), 6);
+    EXPECT_EQ(fileStack.GetSizeOfStack(0), 2);
+    EXPECT_EQ(fileStack.GetSizeOfStack(1), 1);
+    EXPECT_EQ(fileStack.GetSize_M(), 3);
+    EXPECT_EQ(fileStack(0, 0), 100);
+    EXPECT_EQ(fileStack(0, 1), 200);
+    EXPECT_EQ(fileStack(1, 0), 300);
+
+    // Удаляем тестовый файл
+    std::remove(filename.c_str());
+}
+
+// Тест конструктора перемещения
+TEST_F(TMultiStackTest, MoveConstructor) {
+    stack3x5.Push(0, 10);
+    stack3x5.Push(1, 20);
+    
     TMultiStack<int> moveStack(std::move(stack3x5));
+    
     EXPECT_EQ(moveStack.GetCountStacks(), 3);
     EXPECT_EQ(moveStack.GetCapacity_M(), 15);
-    EXPECT_EQ(moveStack.Size(0), 1);
-    EXPECT_EQ(moveStack.Size(1), 1);
+    EXPECT_EQ(moveStack.GetSizeOfStack(0), 1);
+    EXPECT_EQ(moveStack.GetSizeOfStack(1), 1);
+    EXPECT_EQ(moveStack.GetSize_M(), 2);
+    EXPECT_EQ(moveStack(0, 0), 10);
+    EXPECT_EQ(moveStack(1, 0), 20);
+
+    // Проверяем, что исходный объект обнулен
+    EXPECT_EQ(stack3x5.GetCountStacks(), 0);
+    EXPECT_EQ(stack3x5.GetCapacity_M(), 0);
+    EXPECT_EQ(stack3x5.GetSize_M(), 0);
 }
 
 // Тест операторов присваивания
@@ -60,6 +102,7 @@ TEST_F(TMultiStackTest, AssignmentOperators) {
     TMultiStack<int> assignedStack;
     assignedStack = stack3x5;
     EXPECT_EQ(assignedStack.GetCountStacks(), 3);
+    EXPECT_EQ(assignedStack.GetSize_M(), 2);
     EXPECT_EQ(assignedStack(0, 0), 100);
     EXPECT_EQ(assignedStack(1, 0), 200);
 
@@ -67,6 +110,7 @@ TEST_F(TMultiStackTest, AssignmentOperators) {
     TMultiStack<int> moveAssignedStack;
     moveAssignedStack = std::move(stack3x5);
     EXPECT_EQ(moveAssignedStack.GetCountStacks(), 3);
+    EXPECT_EQ(moveAssignedStack.GetSize_M(), 2);
     EXPECT_EQ(moveAssignedStack(0, 0), 100);
     EXPECT_EQ(moveAssignedStack(1, 0), 200);
 }
@@ -91,21 +135,23 @@ TEST_F(TMultiStackTest, ComparisonOperators) {
 
 // Тест основных операций Push/Pop
 TEST_F(TMultiStackTest, PushPopOperations) {
-    // Тест Push и Pop
     stack3x5.Push(0, 10);
     stack3x5.Push(0, 20);
     stack3x5.Push(1, 30);
     
-    EXPECT_EQ(stack3x5.Size(0), 2);
-    EXPECT_EQ(stack3x5.Size(1), 1);
-    EXPECT_EQ(stack3x5.Size(2), 0);
+    EXPECT_EQ(stack3x5.GetSizeOfStack(0), 2);
+    EXPECT_EQ(stack3x5.GetSizeOfStack(1), 1);
+    EXPECT_EQ(stack3x5.GetSizeOfStack(2), 0);
+    EXPECT_EQ(stack3x5.GetSize_M(), 3);
 
     EXPECT_EQ(stack3x5.Pop(0), 20);
     EXPECT_EQ(stack3x5.Pop(0), 10);
     EXPECT_EQ(stack3x5.Pop(1), 30);
+    
+    EXPECT_EQ(stack3x5.GetSize_M(), 0);
 }
 
-// Тест проверки на пустоту и полноту
+// Тест проверки на пустоту и полноту для отдельных стеков
 TEST_F(TMultiStackTest, IsEmptyIsFull) {
     EXPECT_TRUE(stack2x3.IsEmpty(0));
     EXPECT_TRUE(stack2x3.IsEmpty(1));
@@ -119,6 +165,26 @@ TEST_F(TMultiStackTest, IsEmptyIsFull) {
     
     EXPECT_FALSE(stack2x3.IsEmpty(0));
     EXPECT_TRUE(stack2x3.IsFull(0));
+}
+
+// Тест проверки на пустоту и полноту для всего мультистека
+TEST_F(TMultiStackTest, IsEmptyIsFullMulti) {
+    TMultiStack<int> stack(2, 2);
+    
+    EXPECT_TRUE(stack.IsEmpty_M());
+    EXPECT_FALSE(stack.IsFull_M());
+
+    // Заполняем частично
+    stack.Push(0, 1);
+    stack.Push(1, 2);
+    EXPECT_FALSE(stack.IsEmpty_M());
+    EXPECT_FALSE(stack.IsFull_M());
+
+    // Заполняем полностью
+    stack.Push(0, 3);
+    stack.Push(1, 4);
+    EXPECT_FALSE(stack.IsEmpty_M());
+    EXPECT_TRUE(stack.IsFull_M());
 }
 
 // Тест оператора доступа
@@ -149,7 +215,7 @@ TEST_F(TMultiStackTest, FindMin) {
 
 // Тест репака (перераспределения памяти)
 TEST_F(TMultiStackTest, Repack) {
-    TMultiStack<int> stack(3, 2); // 3 стека по 2 элемента
+    TMultiStack<int> stack(3, 2);
     
     // Заполняем все стеки
     for (int i = 0; i < 3; ++i) {
@@ -162,12 +228,9 @@ TEST_F(TMultiStackTest, Repack) {
     EXPECT_TRUE(stack.IsFull(0));
     EXPECT_TRUE(stack.IsFull(1));
     EXPECT_TRUE(stack.IsFull(2));
+    EXPECT_TRUE(stack.IsFull_M());
 
-    // Попробуем добавить в полный стек - должен сработать репак
-    EXPECT_NO_THROW(stack.Push(1, 999));
-    
-    // Проверяем, что репак сработал
-    EXPECT_EQ(stack.Size(1), 3); // Теперь в стеке 1 три элемента
+    EXPECT_THROW(stack.Push(1, 999), TError);
 }
 
 // Тест работы с файлами
@@ -183,21 +246,23 @@ TEST_F(TMultiStackTest, FileOperations) {
     // Сохраняем в файл
     EXPECT_NO_THROW(stack3x5.SaveToFile(filename));
 
-    // Проверяем, что файл создался: пытаемся открыть
+    // Проверяем что файл создался
     std::ifstream testFile(filename, std::ios::binary);
     EXPECT_TRUE(testFile.is_open());
-    testFile.close();
+    if (testFile.is_open()) {
+        testFile.close();
+    }
 
     // Загружаем из файла
-    TMultiStack<int> loadedStack;
-    EXPECT_NO_THROW(loadedStack.LoadFromFile(filename));
+    TMultiStack<int> loadedStack(filename);
     
     // Проверяем загруженные данные
     EXPECT_EQ(loadedStack.GetCountStacks(), 3);
     EXPECT_EQ(loadedStack.GetCapacity_M(), 15);
-    EXPECT_EQ(loadedStack.Size(0), 2);
-    EXPECT_EQ(loadedStack.Size(1), 1);
-    EXPECT_EQ(loadedStack.Size(2), 1);
+    EXPECT_EQ(loadedStack.GetSizeOfStack(0), 2);
+    EXPECT_EQ(loadedStack.GetSizeOfStack(1), 1);
+    EXPECT_EQ(loadedStack.GetSizeOfStack(2), 1);
+    EXPECT_EQ(loadedStack.GetSize_M(), 4);
     EXPECT_EQ(loadedStack(0, 0), 100);
     EXPECT_EQ(loadedStack(0, 1), 200);
     EXPECT_EQ(loadedStack(1, 0), 300);
@@ -214,7 +279,7 @@ TEST_F(TMultiStackTest, ErrorHandling) {
     EXPECT_THROW(stack3x5.Pop(5), TError);
     EXPECT_THROW(stack3x5.IsEmpty(5), TError);
     EXPECT_THROW(stack3x5.IsFull(5), TError);
-    EXPECT_THROW(stack3x5.Size(5), TError);
+    EXPECT_THROW(stack3x5.GetSizeOfStack(5), TError);
     EXPECT_THROW(stack3x5(5, 0), TError);
 
     // Попытка извлечь из пустого стека
@@ -225,11 +290,11 @@ TEST_F(TMultiStackTest, ErrorHandling) {
     EXPECT_THROW(stack3x5(0, 5), TError);
 
     // Попытка загрузить из несуществующего файла
-    EXPECT_THROW(stack3x5.LoadFromFile("nonexistent_file.bin"), TError);
+    EXPECT_THROW(TMultiStack<int> stack("nonexistent_file.bin"), TError);
 }
 
 // Тест с различными типами данных
-TEST(TMultyStackDifferentTypes, VariousTypes) {
+TEST(TMultiStackDifferentTypes, VariousTypes) {
     // Тест с double
     TMultiStack<double> doubleStack(2, 3);
     doubleStack.Push(0, 3.14);
@@ -251,6 +316,7 @@ TEST_F(TMultiStackTest, EdgeCases) {
     TMultiStack<int> zeroStack(0, 0);
     EXPECT_EQ(zeroStack.GetCountStacks(), 0);
     EXPECT_EQ(zeroStack.GetCapacity_M(), 0);
+    EXPECT_EQ(zeroStack.GetSize_M(), 0);
 
     // Стек с одним элементом
     TMultiStack<int> singleStack(1, 1);
@@ -260,23 +326,69 @@ TEST_F(TMultiStackTest, EdgeCases) {
     EXPECT_TRUE(singleStack.IsEmpty(0));
 }
 
-// Тест производительности (базовый)
-TEST_F(TMultiStackTest, PerformanceTest) {
-    const int NUM_STACKS = 10;
-    const int STACK_CAPACITY = 1000;
+// Тест переполнения мультистека
+TEST_F(TMultiStackTest, MultiStackOverflow) {
+    TMultiStack<int> stack(2, 2);
     
-    TMultiStack<int> perfStack(NUM_STACKS, STACK_CAPACITY);
+    // Заполняем полностью
+    stack.Push(0, 1);
+    stack.Push(0, 2);
+    stack.Push(1, 3);
+    stack.Push(1, 4);
     
-    // Заполняем все стеки
-    for (int i = 0; i < NUM_STACKS; ++i) {
-        for (int j = 0; j < STACK_CAPACITY; ++j) {
-            perfStack.Push(i, j);
-        }
-    }
+    EXPECT_TRUE(stack.IsFull_M());
     
-    // Проверяем, что все заполнено корректно
-    for (int i = 0; i < NUM_STACKS; ++i) {
-        EXPECT_TRUE(perfStack.IsFull(i));
-        EXPECT_EQ(perfStack.Size(i), STACK_CAPACITY);
-    }
+    // Попытка добавить в полный мультистек
+    // Должен сработать репак, но если все стеки полны - исключение
+    // В текущей реализации Repack проверяет IsFull_M() и бросает исключение
+    EXPECT_THROW(stack.Push(0, 5), TError);
+}
+
+// Тест оператора вывода
+TEST_F(TMultiStackTest, OutputOperator) {
+    stack2x3.Push(0, 1);
+    stack2x3.Push(0, 2);
+    stack2x3.Push(1, 3);
+    
+    std::ostringstream oss;
+    oss << stack2x3;
+    
+    // Проверяем форматированный вывод
+    std::string result = oss.str();
+    EXPECT_TRUE(result.find("[1,2]") != std::string::npos);
+    EXPECT_TRUE(result.find("[3]") != std::string::npos);
+    EXPECT_TRUE(result.find("{") != std::string::npos);
+    EXPECT_TRUE(result.find("}") != std::string::npos);
+}
+
+// Тест метода GetSize_M
+TEST_F(TMultiStackTest, GetSize_M) {
+    EXPECT_EQ(stack3x5.GetSize_M(), 0);
+    
+    stack3x5.Push(0, 1);
+    EXPECT_EQ(stack3x5.GetSize_M(), 1);
+    
+    stack3x5.Push(1, 2);
+    stack3x5.Push(1, 3);
+    EXPECT_EQ(stack3x5.GetSize_M(), 3);
+    
+    stack3x5.Push(2, 4);
+    stack3x5.Push(2, 5);
+    stack3x5.Push(2, 6);
+    EXPECT_EQ(stack3x5.GetSize_M(), 6);
+}
+
+// Тест метода GetSizeOfStack
+TEST_F(TMultiStackTest, GetSizeOfStack) {
+    EXPECT_EQ(stack3x5.GetSizeOfStack(0), 0);
+    EXPECT_EQ(stack3x5.GetSizeOfStack(1), 0);
+    EXPECT_EQ(stack3x5.GetSizeOfStack(2), 0);
+    
+    stack3x5.Push(0, 1);
+    stack3x5.Push(0, 2);
+    EXPECT_EQ(stack3x5.GetSizeOfStack(0), 2);
+    EXPECT_EQ(stack3x5.GetSizeOfStack(1), 0);
+    
+    stack3x5.Push(1, 3);
+    EXPECT_EQ(stack3x5.GetSizeOfStack(1), 1);
 }

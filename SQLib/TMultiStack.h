@@ -4,7 +4,6 @@
 #include <fstream>
 #include <algorithm>
 #include "TError_Adv.h"
-#define ERROR(err,...) throw TError(err, __func__, __FILE__, __LINE__)
 
 template<typename T>
 class TMultiStack
@@ -23,6 +22,7 @@ public:
     TMultiStack(size_t count_stacks_, size_t capacity_stack);
     TMultiStack(const TMultiStack& other);
     TMultiStack(TMultiStack&& other) noexcept;
+    TMultiStack(const std::string& filename);
     ~TMultiStack();
 
     bool operator==(const TMultiStack& other) const;
@@ -34,28 +34,31 @@ public:
     TMultiStack& operator=(TMultiStack&& other) noexcept;
 
     size_t GetCapacity_M() const;
+    size_t GetSize_M() const;
     size_t GetCountStacks() const;
-    size_t Size(size_t count_of_stack) const;
+    size_t GetSizeOfStack(size_t count_of_stack) const;
 
     bool IsFull(size_t count_of_stack) const;
     bool IsEmpty(size_t count_of_stack) const;
+
+    bool IsFull_M() const;
+    bool IsEmpty_M() const;
 
     void Push(size_t count_of_stack, const T& value);
     T Pop(size_t count_of_stack);
 
     T FindMin() const;
     void SaveToFile(const std::string& filename) const;
-    void LoadFromFile(const std::string& filename);
 
     template<class O>
-    friend std::ostream& operator<<(std::ostream& os, const TMultiStack<O>& stack);
+    friend std::ostream& operator<<(std::ostream& out, const TMultiStack<O>& stack);
 };
 
 template<typename T>
 inline void TMultiStack<T>::Repack(size_t count_of_stack)
 {
-    if (count_of_stack >= count_stacks) ERROR("stack_error");
-
+    if (count_of_stack >= count_stacks) throw TError("Incorrect input", __func__, __FILE__, __LINE__);
+    if (IsFull_M()) throw TError("Mutlistack is full", __func__, __FILE__, __LINE__);
     size_t find_first_nofull = 0;
     for (size_t i = 0; i < count_stacks; ++i) {
         if (!this->IsFull(i)) {
@@ -64,7 +67,6 @@ inline void TMultiStack<T>::Repack(size_t count_of_stack)
         }
     }
 
-    if (find_first_nofull == count_stacks) ERROR("no_empty_stacks");
     if (find_first_nofull < count_of_stack) {
         for (size_t i = begin_stacks[find_first_nofull + 1]; i < top_stacks[count_of_stack]; ++i)
             data[i - 1] = std::move(data[i]);
@@ -84,9 +86,7 @@ inline void TMultiStack<T>::Repack(size_t count_of_stack)
 }
 
 template<typename T>
-inline TMultiStack<T>::TMultiStack() : capacity(0), count_stacks(0), data(nullptr), begin_stacks(nullptr), top_stacks(nullptr)
-{
-}
+inline TMultiStack<T>::TMultiStack() : capacity(0), count_stacks(0), data(nullptr), begin_stacks(nullptr), top_stacks(nullptr) {}
 
 template<typename T>
 inline TMultiStack<T>::TMultiStack(size_t count_stacks_, size_t capacity_stack)
@@ -96,16 +96,15 @@ inline TMultiStack<T>::TMultiStack(size_t count_stacks_, size_t capacity_stack)
         data = nullptr;
         begin_stacks = nullptr;
         top_stacks = nullptr;
-        return;
-    }
-    
-    data = new T[capacity];
-    begin_stacks = new size_t[count_stacks];
-    top_stacks = new size_t[count_stacks];
-    
-    for (size_t i = 0; i < count_stacks; ++i) {
-        begin_stacks[i] = i * capacity_stack;
-        top_stacks[i] = i * capacity_stack;
+    } else {
+        data = new T[capacity];
+        begin_stacks = new size_t[count_stacks];
+        top_stacks = new size_t[count_stacks];
+        
+        for (size_t i = 0; i < count_stacks; ++i) {
+            begin_stacks[i] = i * capacity_stack;
+            top_stacks[i] = i * capacity_stack;
+        }
     }
 }
 
@@ -146,6 +145,37 @@ inline TMultiStack<T>::TMultiStack(TMultiStack&& other) noexcept
     other.top_stacks = nullptr;
 }
 
+template<class T>
+TMultiStack<T>::TMultiStack(const std::string& filename) : data(nullptr), begin_stacks(nullptr), top_stacks(nullptr), capacity(0), count_stacks(0)
+{
+    std::ifstream file(filename, std::ios::binary);
+    if (!file.is_open()) throw TError("Cannot open file", __func__, __FILE__, __LINE__);
+
+    try {
+        file.read(reinterpret_cast<char*>(&capacity), sizeof(capacity));
+        file.read(reinterpret_cast<char*>(&count_stacks), sizeof(count_stacks));
+
+        if (capacity > 0) {
+            data = new T[capacity];
+            file.read(reinterpret_cast<char*>(data), capacity * sizeof(T));
+        }
+
+        if (count_stacks > 0) {
+            begin_stacks = new size_t[count_stacks];
+            top_stacks = new size_t[count_stacks];
+            file.read(reinterpret_cast<char*>(begin_stacks), count_stacks * sizeof(size_t));
+            file.read(reinterpret_cast<char*>(top_stacks), count_stacks * sizeof(size_t));
+        }
+    } catch (...) {
+        if (data) delete[] data;
+        if (begin_stacks) delete[] begin_stacks;
+        if (top_stacks) delete[] top_stacks;
+        throw TError("Incorrect input", __func__, __FILE__, __LINE__);;
+    }
+
+    file.close();
+}
+
 template<typename T>
 inline TMultiStack<T>::~TMultiStack()
 {
@@ -181,8 +211,8 @@ inline bool TMultiStack<T>::operator!=(const TMultiStack& other) const
 template<class T>
 inline T TMultiStack<T>::operator()(size_t number_of_stacks, size_t index) const
 {
-    if (number_of_stacks >= count_stacks) ERROR("stacks_error");
-    if (index >= this->Size(number_of_stacks)) ERROR("size_error");
+    if (number_of_stacks >= count_stacks) throw TError("Incorrect input", __func__, __FILE__, __LINE__);
+    if (index >= this->GetSizeOfStack(number_of_stacks)) throw TError("Incorrect input", __func__, __FILE__, __LINE__);
     return data[begin_stacks[number_of_stacks] + index];
 }
 
@@ -225,6 +255,14 @@ inline size_t TMultiStack<T>::GetCapacity_M() const
     return capacity;
 }
 
+template <typename T>
+inline size_t TMultiStack<T>::GetSize_M() const
+{
+    size_t size = 0;
+    for (size_t i = 0; i < count_stacks; i++) size += GetSizeOfStack(i);
+    return size;
+}
+
 template<class T>
 inline size_t TMultiStack<T>::GetCountStacks() const
 {
@@ -232,16 +270,16 @@ inline size_t TMultiStack<T>::GetCountStacks() const
 }
 
 template<class T>
-inline size_t TMultiStack<T>::Size(size_t number_of_stack) const
+inline size_t TMultiStack<T>::GetSizeOfStack(size_t number_of_stack) const
 {
-    if (number_of_stack >= count_stacks) ERROR("stack_error");
+    if (number_of_stack >= count_stacks) throw TError("Incorrect input", __func__, __FILE__, __LINE__);
     return top_stacks[number_of_stack] - begin_stacks[number_of_stack];
 }
 
 template<class T>
 inline bool TMultiStack<T>::IsFull(size_t number_of_stack) const
 {
-    if (number_of_stack >= count_stacks) ERROR("stack_error");
+    if (number_of_stack >= count_stacks) throw TError("Incorrect input", __func__, __FILE__, __LINE__);
     
     if (number_of_stack == count_stacks - 1)
         return top_stacks[number_of_stack] == capacity;
@@ -252,14 +290,26 @@ inline bool TMultiStack<T>::IsFull(size_t number_of_stack) const
 template<class T>
 inline bool TMultiStack<T>::IsEmpty(size_t number_of_stack) const
 {
-    if (number_of_stack >= count_stacks) ERROR("stack_error");
+    if (number_of_stack >= count_stacks) throw TError("Incorrect input", __func__, __FILE__, __LINE__);
     return top_stacks[number_of_stack] == begin_stacks[number_of_stack];
+}
+
+template <typename T>
+inline bool TMultiStack<T>::IsFull_M() const
+{
+    return capacity == GetSize_M();
+}
+
+template <typename T>
+inline bool TMultiStack<T>::IsEmpty_M() const
+{
+    return GetSize_M() == 0;
 }
 
 template<class T>
 inline void TMultiStack<T>::Push(size_t number_of_stack, const T& value)
 {
-    if (number_of_stack >= count_stacks) ERROR("stack_error");
+    if (number_of_stack >= count_stacks) throw TError("Incorrect input", __func__, __FILE__, __LINE__);
     if (this->IsFull(number_of_stack)) this->Repack(number_of_stack); 
     data[top_stacks[number_of_stack]++] = value;
 }
@@ -267,8 +317,8 @@ inline void TMultiStack<T>::Push(size_t number_of_stack, const T& value)
 template<class T>
 inline T TMultiStack<T>::Pop(size_t number_of_stack)
 {
-    if (number_of_stack >= count_stacks) ERROR("stack_error");
-    if (this->IsEmpty(number_of_stack)) ERROR("empty_stack");
+    if (number_of_stack >= count_stacks) throw TError("Incorrect input", __func__, __FILE__, __LINE__);
+    if (this->IsEmpty(number_of_stack)) throw TError("Stact is empty", __func__, __FILE__, __LINE__);
     
     return data[--top_stacks[number_of_stack]];
 }
@@ -279,9 +329,9 @@ std::ostream& operator<<(std::ostream& out, const TMultiStack<O>& stack)
     out << "{ ";
     for (size_t i = 0; i < stack.GetCountStacks(); ++i) {
         out << "[";
-        for (size_t j = 0; j < stack.Size(i); ++j) {
+        for (size_t j = 0; j < stack.GetSizeOfStack(i); ++j) {
             out << stack(i, j);
-            if (j < stack.Size(i) - 1) {
+            if (j < stack.GetSizeOfStack(i) - 1) {
                 out << ",";
             }
         }
@@ -297,31 +347,26 @@ std::ostream& operator<<(std::ostream& out, const TMultiStack<O>& stack)
 template<class T>
 inline T TMultiStack<T>::FindMin() const
 {
-    if (capacity == 0 || count_stacks == 0)
-        ERROR("empty_stack");
-
-    bool found = false;
-    T minElem;
+    if (IsEmpty_M())  throw TError("Stack is empty", __func__, __FILE__, __LINE__);
     
+    size_t firstNonEmpty = count_stacks;
     for (size_t i = 0; i < count_stacks; ++i) {
-        if (!this->IsEmpty(i)) {
-            minElem = data[begin_stacks[i]];
-            found = true;
+        if (!IsEmpty(i)) {
+            firstNonEmpty = i;
             break;
         }
     }
-
-    if (!found) ERROR("all_stacks_empty");
+    
+    T minElem = data[begin_stacks[firstNonEmpty]];
     
     for (size_t i = 0; i < count_stacks; ++i) {
-        if (!this->IsEmpty(i)) {
+        if (!IsEmpty(i)) {
             for (size_t j = begin_stacks[i]; j < top_stacks[i]; ++j) {
                 if (data[j] < minElem)
                     minElem = data[j];
             }
         }
     }
-
     return minElem;
 }
 
@@ -329,8 +374,7 @@ template<class T>
 inline void TMultiStack<T>::SaveToFile(const std::string& filename) const
 {
     std::ofstream file(filename, std::ios::binary);
-    if (!file.is_open())
-        ERROR("cannot_open_file");
+    if (!file.is_open()) throw TError("Incorrect input", __func__, __FILE__, __LINE__);
         
     file.write(reinterpret_cast<const char*>(&capacity), sizeof(capacity));
     file.write(reinterpret_cast<const char*>(&count_stacks), sizeof(count_stacks));
@@ -349,59 +393,6 @@ inline void TMultiStack<T>::SaveToFile(const std::string& filename) const
             file.write(reinterpret_cast<const char*>(&top_stacks[i]), sizeof(size_t));
         }
     }
-
-    file.close();
-}
-
-template<class T>
-inline void TMultiStack<T>::LoadFromFile(const std::string& filename)
-{
-    std::ifstream file(filename, std::ios::binary);
-    if (!file.is_open())
-        ERROR("cannot_open_file");
-
-    size_t temp_capacity, temp_count_stacks;
-    file.read(reinterpret_cast<char*>(&temp_capacity), sizeof(temp_capacity));
-    file.read(reinterpret_cast<char*>(&temp_count_stacks), sizeof(temp_count_stacks));
-
-    T* temp_data = nullptr;
-    size_t* temp_begin_stacks = nullptr;
-    size_t* temp_top_stacks = nullptr;
-
-    try {
-        if (temp_capacity > 0) {
-            temp_data = new T[temp_capacity];
-            for (size_t i = 0; i < temp_capacity; ++i) {
-                file.read(reinterpret_cast<char*>(&temp_data[i]), sizeof(T));
-            }
-        }
-
-        if (temp_count_stacks > 0) {
-            temp_begin_stacks = new size_t[temp_count_stacks];
-            temp_top_stacks = new size_t[temp_count_stacks];
-            for (size_t i = 0; i < temp_count_stacks; ++i) {
-                file.read(reinterpret_cast<char*>(&temp_begin_stacks[i]), sizeof(size_t));
-            }
-            for (size_t i = 0; i < temp_count_stacks; ++i) {
-                file.read(reinterpret_cast<char*>(&temp_top_stacks[i]), sizeof(size_t));
-            }
-        }
-    } catch (...) {
-        delete[] temp_data;
-        delete[] temp_begin_stacks;
-        delete[] temp_top_stacks;
-        throw;
-    }
-
-    delete[] data;
-    delete[] begin_stacks;
-    delete[] top_stacks;
-
-    data = temp_data;
-    begin_stacks = temp_begin_stacks;
-    top_stacks = temp_top_stacks;
-    capacity = temp_capacity;
-    count_stacks = temp_count_stacks;
 
     file.close();
 }
