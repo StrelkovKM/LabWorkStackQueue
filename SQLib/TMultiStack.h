@@ -179,9 +179,10 @@ TMultiStack<T>::TMultiStack(const std::string& filename) : data(nullptr), begin_
 template<typename T>
 inline TMultiStack<T>::~TMultiStack()
 {
-    delete[] data;
-    delete[] begin_stacks;
-    delete[] top_stacks;
+    if (data) delete[] data;
+    if (begin_stacks) delete[] begin_stacks;
+    if (top_stacks) delete[] top_stacks;
+    
 }
 
 template<typename T>
