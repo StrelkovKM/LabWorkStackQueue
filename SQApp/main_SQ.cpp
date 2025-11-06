@@ -3,7 +3,7 @@
 #include "TMultiStack.h"
 
 int main() {
-    TMultiStack<char> d(9, 3);
+    TMultiStack<char> d(3, 3);
     d.Push(0, 'a');
     d.Push(0, 'b');
     d.Push(0, 'c');
