@@ -3,7 +3,7 @@
 #include <iostream>
 #include <initializer_list>
 
-#include "TError_Adv.h"
+#include "TError.hpp"
 #include "TString_Adv.h"
 #include "TVector_AdvImp.h"
 #include "TStack.h"

@@ -3,7 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
-#include "TError_Adv.h"
+#include "TError.hpp"
 
 template<typename T>
 class TMultiStack
